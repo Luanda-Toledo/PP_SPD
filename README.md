@@ -33,8 +33,8 @@ Este proyecto Arduino implementa un contador de 7 segmentos que muestra un núme
 - Se utiliza una resistencia pull-up interna para los pines de entrada de los botones.
 
 ## Integrantes
-Yanina Bonelli
-Matias Caballero
+- Yanina Bonelli
+- Matias Caballero
 
 ## Link al proyecto
 https://www.tinkercad.com/things/04xtZsmu38V
