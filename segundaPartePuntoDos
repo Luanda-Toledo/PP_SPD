@@ -1,0 +1,272 @@
+/*
+CONTROL DE VELOCIDAD DE VENTILADOR CON SENSOR DE TEMPERATURA.
+
+Controla la velocidad de un ventilador de acuerdo con la temperatura ambiente. 
+Al aumentar la temperatura, el ventilador gira más rápido para enfriar el entorno. 
+Además, muestra la temperatura en un display de 7 segmentos.
+*/
+#define A 12
+#define B 13
+#define C 7
+#define D 8
+#define E 9
+#define F 11
+#define G 10
+#define UNIDAD A4
+#define DECENA A5
+#define NINGUNO 0
+#define APAGADO 1
+#define AMBOS 17 
+#define ENTRADA_INTERRUPTOR 2
+#define SENSOR A0
+#define MOTOR_CC 3
+
+int time = 10;
+int lecturaSwitch = 0;
+
+// Definir los valores mínimo y máximo para el mapeo de rango de temperatura
+float TEMPERATURE_MIN = -40.0;  
+float TEMPERATURE_MAX = 125.0; 
+
+// Definir los valores mínimo y máximo para la lectura analógica
+int ANALOG_MIN = 20;     
+int ANALOG_MAX = 358; 
+
+void setup()
+{
+  // Configurar los pines de entrada para los botones y los pines de salida
+  pinMode(ENTRADA_INTERRUPTOR, INPUT_PULLUP);
+  pinMode(C, OUTPUT);
+  pinMode(D, OUTPUT);
+  pinMode(E, OUTPUT);
+  pinMode(G, OUTPUT);
+  pinMode(F, OUTPUT);
+  pinMode(A, OUTPUT);
+  pinMode(B, OUTPUT);
+  pinMode(UNIDAD, OUTPUT);
+  pinMode(DECENA, OUTPUT);
+  
+  pinMode(SENSOR, INPUT);
+  pinMode(MOTOR_CC, OUTPUT);
+ 
+  // Inicializa algunos pines en APAGADO / ENCENDIDO
+  digitalWrite(UNIDAD, APAGADO);
+  digitalWrite(DECENA, APAGADO);
+  digitalWrite(A, LOW);
+  digitalWrite(B, LOW);
+  digitalWrite(C, LOW);
+  digitalWrite(D, LOW);
+  digitalWrite(E, LOW);
+  digitalWrite(F, LOW);
+  digitalWrite(G, LOW);
+  
+  Serial.begin(9600);
+}
+
+/**
+ * Función: loop
+ * Descripción: Función principal del programa que realiza la lectura de sensores y controla el motor y los displays.
+ * Esta función se ejecuta en un ciclo infinito y se encarga de realizar las siguientes tareas:
+ * 1. Lee el estado del interruptor conectado a la entrada definida como ENTRADA_INTERRUPTOR.
+ * 2. Realiza una lectura analógica del sensor conectado a la entrada SENSOR.
+ * 3. Convierte la lectura analógica en una temperatura en grados Celsius y la muestra en el puerto serie.
+ * 4. Calcula la velocidad del motor en base a la lectura del sensor y la controla usando la función "analogWrite".
+ * 5. Mapea la lectura del sensor a un valor de dos dígitos (0-99) para mostrarlo en los displays de 7 segmentos.
+ * 6. Muestra la temperatura en los displays de 7 segmentos si el interruptor está en la posición "encendido".
+ * 7. Apaga los displays si el interruptor está en la posición "apagado".
+ */
+void loop()
+{
+  lecturaSwitch = digitalRead(ENTRADA_INTERRUPTOR);
+
+  // Seleccion off / on segun el interruptor
+  if (lecturaSwitch == 1)
+  {
+    // Leer el valor analógico del sensor
+  	int valorLeidoAnalogicamente = analogRead(SENSOR);
+  
+  	// Mapear la lectura analógica a un rango de temperatura
+  	float temperaturaCelsius = map(valorLeidoAnalogicamente, ANALOG_MIN, ANALOG_MAX, TEMPERATURE_MIN * 10, TEMPERATURE_MAX * 10) / 10.0; 
+  	
+    // Mapear la lectura analogica a un rango de velocidad del motor cc
+  	float velocidadDelMotor = map(valorLeidoAnalogicamente, ANALOG_MIN, ANALOG_MAX, 0, 255);
+    
+    // Mapear el valor de la temperatura para mostrar en los desplay
+    int valorAMostrarEnElDisplay = map(valorLeidoAnalogicamente, ANALOG_MIN, ANALOG_MAX, 0, 99);
+  
+  	// Controla la velocidad del motor
+  	analogWrite(MOTOR_CC, velocidadDelMotor);
+  
+  	Serial.print("Temperatura: ");
+  	Serial.print(temperaturaCelsius);
+  	Serial.println(" °C");
+  	Serial.print("Velocidad del motor: ");
+  	Serial.println(velocidadDelMotor);
+  	Serial.print("Valor a mostra en los display: ");
+  	Serial.println(valorAMostrarEnElDisplay);
+    
+  	imprimirDosDigitos(valorAMostrarEnElDisplay);
+  }
+  //Apagar
+  else 
+  {
+    elegirDisplayActualizar(AMBOS);
+    seleccionarDigito(10); //default apaga
+    analogWrite(MOTOR_CC, 0);
+  }    
+} 
+
+/**
+ * Función: elegirDisplayActualizar
+ * Descripción: Controla la activación de dos displays de 7 segmentos para mostrar números de dos dígitos.
+ * Esta función permite seleccionar cuál de los dos displays de 7 segmentos se va a actualizar para mostrar
+ * un número de dos dígitos. El parámetro "display" determina si se actualizará el display de las unidades, el de las decenas,
+ * ambos o ninguno.
+ * Parámetro:
+ *   - display: Un valor entero que indica qué display se actualizará (UNIDAD, DECENA, AMBOS o NINGUNO).
+ */
+void elegirDisplayActualizar(int display)
+{
+ if (display == UNIDAD)
+  {
+    digitalWrite(UNIDAD, LOW);
+    digitalWrite(DECENA, HIGH);
+    delay(time);
+  }
+  else if (display == DECENA)
+  {
+    digitalWrite(UNIDAD, HIGH);
+    digitalWrite(DECENA, LOW);
+    delay(time);
+  }
+  else if(display == AMBOS)
+  {
+    digitalWrite(UNIDAD, LOW);
+    digitalWrite(DECENA, LOW);
+    delay(time);
+  }
+  else 
+  {
+    // No se actualiza ningun dsplay
+    digitalWrite(UNIDAD, HIGH);
+    digitalWrite(DECENA, HIGH);
+  }
+}
+
+/**
+ * Función: imprimirDosDigitos
+ * Descripción: Imprime un número de dos dígitos en dos displays de 7 segmentos.
+ * Esta función toma un número de dos dígitos y lo muestra en dos displays de 7 segmentos. 
+ * Imprime el dígito de las decenas en el primer display y el dígito de las unidades en el segundo display.
+ * Parámetro:
+ *   - numeroAImprimir: Un número entero de dos dígitos (0-99) que se mostrará en los displays.
+ */
+void imprimirDosDigitos(int numeroAImprimir)
+{
+  elegirDisplayActualizar(NINGUNO);
+
+  // Imprime el dígito de las decenas
+  seleccionarDigito(numeroAImprimir / 10);
+
+  elegirDisplayActualizar(DECENA);
+
+  elegirDisplayActualizar(NINGUNO);
+
+  // Imprime el dígito de las unidades
+  seleccionarDigito(numeroAImprimir - 10 * ((int)numeroAImprimir / 10));
+
+  elegirDisplayActualizar(UNIDAD);
+}
+
+/**
+ * Función: seleccionarDigito
+ * Descripción: Controla la activación de los segmentos de un display de 7 segmentos
+ *              para mostrar un dígito específico.
+ * Parámetro:
+ *   - digito: Un entero que representa el dígito a mostrar en el display (0-9).
+ */
+void seleccionarDigito(int digito)
+{
+  digitalWrite(A, LOW);
+  digitalWrite(B, LOW);
+  digitalWrite(C, LOW);
+  digitalWrite(D, LOW);
+  digitalWrite(E, LOW);
+  digitalWrite(F, LOW);
+  digitalWrite(G, LOW);
+
+  switch(digito)
+  {
+    case 0: // 0 - A,B,C,D,E,F
+  		digitalWrite(A, HIGH);
+  		digitalWrite(B, HIGH);
+  		digitalWrite(C, HIGH);
+  		digitalWrite(D, HIGH);
+  		digitalWrite(E, HIGH);
+  		digitalWrite(F, HIGH);	
+  		break;
+    case 1: // 1 - B,C
+  		digitalWrite(B, HIGH);
+  		digitalWrite(C, HIGH);
+  		break;
+    case 2: // 2 - A,B,D,E,G
+  		digitalWrite(A, HIGH);
+  		digitalWrite(B, HIGH);
+  		digitalWrite(D, HIGH);
+  		digitalWrite(E, HIGH);
+  		digitalWrite(G, HIGH);
+    	break;
+    case 3: // 3 - A,B,C,D,G
+  		digitalWrite(A, HIGH);
+  		digitalWrite(B, HIGH);
+  		digitalWrite(C, HIGH);
+  		digitalWrite(D, HIGH);
+  		digitalWrite(G, HIGH);
+  		break;
+    case 4: // 4 - B,C,F,G
+  		digitalWrite(B, HIGH);
+  		digitalWrite(C, HIGH);
+  		digitalWrite(F, HIGH);
+  		digitalWrite(G, HIGH);
+  		break;
+    case 5: // 5 - A,C,D,F,G
+  		digitalWrite(A, HIGH);
+  		digitalWrite(C, HIGH);
+  		digitalWrite(D, HIGH);
+  		digitalWrite(F, HIGH);
+  		digitalWrite(G, HIGH);
+  		break;
+    case 6: // 6 - A,C,D,E,F,G
+    	digitalWrite(A, HIGH);
+  		digitalWrite(C, HIGH);
+  		digitalWrite(D, HIGH);
+  		digitalWrite(E, HIGH);
+  		digitalWrite(F, HIGH);
+  		digitalWrite(G, HIGH);
+  		break;
+    case 7: // 7 - A,B,C
+  		digitalWrite(A, HIGH);
+ 		digitalWrite(B, HIGH);
+  		digitalWrite(C, HIGH);
+  		break;
+    case 8: // 8 - TODOS
+  		digitalWrite(A, HIGH);
+  		digitalWrite(B, HIGH);
+  		digitalWrite(C, HIGH);
+  		digitalWrite(D, HIGH);
+  		digitalWrite(E, HIGH);
+  		digitalWrite(F, HIGH);
+  		digitalWrite(G, HIGH);
+  		break;
+    case 9:
+    	// 9 - A,B,C,F,G
+  		digitalWrite(A, HIGH);
+  		digitalWrite(B, HIGH);
+ 		digitalWrite(C, HIGH);
+  		digitalWrite(F, HIGH);
+  		digitalWrite(G, HIGH);
+  		break;
+    default:
+    	break;
+  }
+}
