@@ -61,7 +61,7 @@ Este proyecto de control de velocidad de ventilador tiene diversas aplicaciones 
 Estos son solo algunos ejemplos, y las aplicaciones son variadas. Las posibilidades son amplias, y el código puede adaptarse y personalizarse para satisfacer necesidades específicas en diversas situaciones de aplicaciones prácticas.
 
 ## Link al proyecto
-https://www.tinkercad.com/things/jI6ACbfG410-ppsegundaparte2/editel
+https://www.tinkercad.com/things/f52H9MydDr2-ppterceraparte
 
 
 
