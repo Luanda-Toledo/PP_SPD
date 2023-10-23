@@ -1,0 +1,258 @@
+#define A 12
+#define B 13
+#define C 7
+#define D 8
+#define E 9
+#define F 11
+#define G 10
+#define ENTRADA_RESET 5
+#define ENTRADA_SUMA 4
+#define ENTRADA_RESTA 3
+#define UNIDAD A4
+#define DECENA A5
+#define APAGADOS 0
+#define APAGADO 1
+#define ENTRADA_INTERRUPTOR 2
+#define AMBOS 17
+
+int time = 20;
+int contadorDigito = 0;
+int sumar = 1;
+int restar = 1;
+int reset = 1;
+int valorAnteriorDeLaSuma = 1;
+int valorAnteriorDeLaResta = 1; 
+int valorAnteriorDelReset = 1;
+int lecturaSwitch = 0;
+int delayManual = 0;
+void setup()
+{
+  // Configurar los pines de entrada para los botones y los pines de salida
+  pinMode(ENTRADA_RESTA, INPUT_PULLUP);
+  pinMode(ENTRADA_SUMA, INPUT_PULLUP);
+  pinMode(ENTRADA_RESET, INPUT_PULLUP);
+  pinMode(ENTRADA_INTERRUPTOR, INPUT_PULLUP);
+  pinMode(C, OUTPUT);
+  pinMode(D, OUTPUT);
+  pinMode(E, OUTPUT);
+  pinMode(G, OUTPUT);
+  pinMode(F, OUTPUT);
+  pinMode(A, OUTPUT);
+  pinMode(B, OUTPUT);
+  pinMode(UNIDAD, OUTPUT);
+  pinMode(DECENA, OUTPUT);
+ 
+  // Inicializa algunos pines en APAGADO / ENCENDIDO
+  digitalWrite(UNIDAD, APAGADO);
+  digitalWrite(DECENA, APAGADO);
+  digitalWrite(A, LOW);
+  digitalWrite(B, LOW);
+  digitalWrite(C, LOW);
+  digitalWrite(D, LOW);
+  digitalWrite(E, LOW);
+  digitalWrite(F, LOW);
+  digitalWrite(G, LOW);
+}
+
+void loop()
+{
+  lecturaSwitch = digitalRead(ENTRADA_INTERRUPTOR);
+  
+  if (lecturaSwitch == 0)
+  {
+    elegirDisplay(AMBOS);
+  }
+  else
+  {
+    delayManual = 0;
+    botonPresionado();
+    imprimirContador(contadorDigito);
+  }
+}
+
+// FUNCIONES 
+
+// Apagamos a todos los pines de los display y 
+// los encendemos solo si entran en algun case
+void imprimirDigito(int digito)
+{
+  digitalWrite(A, LOW);
+  digitalWrite(B, LOW);
+  digitalWrite(C, LOW);
+  digitalWrite(D, LOW);
+  digitalWrite(E, LOW);
+  digitalWrite(F, LOW);
+  digitalWrite(G, LOW);
+  
+  // Controlar la visualización de siete segmentos según el valor de digito
+  switch(digito)
+  {
+    case 0: // 0 - A,B,C,D,E,F
+  		digitalWrite(A, HIGH);
+  		digitalWrite(B, HIGH);
+  		digitalWrite(C, HIGH);
+  		digitalWrite(D, HIGH);
+  		digitalWrite(E, HIGH);
+  		digitalWrite(F, HIGH);	
+  		break;
+    case 1: // 1 - B,C
+  		digitalWrite(B, HIGH);
+  		digitalWrite(C, HIGH);
+  		break;
+    case 2: // 2 - A,B,D,E,G
+  		digitalWrite(A, HIGH);
+  		digitalWrite(B, HIGH);
+  		digitalWrite(D, HIGH);
+  		digitalWrite(E, HIGH);
+  		digitalWrite(G, HIGH);
+    	break;
+    case 3: // 3 - A,B,C,D,G
+  		digitalWrite(A, HIGH);
+  		digitalWrite(B, HIGH);
+  		digitalWrite(C, HIGH);
+  		digitalWrite(D, HIGH);
+  		digitalWrite(G, HIGH);
+  		break;
+    case 4: // 4 - B,C,F,G
+  		digitalWrite(B, HIGH);
+  		digitalWrite(C, HIGH);
+  		digitalWrite(F, HIGH);
+  		digitalWrite(G, HIGH);
+  		break;
+    case 5: // 5 - A,C,D,F,G
+  		digitalWrite(A, HIGH);
+  		digitalWrite(C, HIGH);
+  		digitalWrite(D, HIGH);
+  		digitalWrite(F, HIGH);
+  		digitalWrite(G, HIGH);
+  		break;
+    case 6: // 6 - A,C,D,E,F,G
+    	digitalWrite(A, HIGH);
+  		digitalWrite(C, HIGH);
+  		digitalWrite(D, HIGH);
+  		digitalWrite(E, HIGH);
+  		digitalWrite(F, HIGH);
+  		digitalWrite(G, HIGH);
+  		break;
+    case 7: // 7 - A,B,C
+  		digitalWrite(A, HIGH);
+ 		digitalWrite(B, HIGH);
+  		digitalWrite(C, HIGH);
+  		break;
+    case 8: // 8 - TODOS
+  		digitalWrite(A, HIGH);
+  		digitalWrite(B, HIGH);
+  		digitalWrite(C, HIGH);
+  		digitalWrite(D, HIGH);
+  		digitalWrite(E, HIGH);
+  		digitalWrite(F, HIGH);
+  		digitalWrite(G, HIGH);
+  		break;
+    case 9:
+    	// 9 - A,B,C,F,G
+  		digitalWrite(A, HIGH);
+  		digitalWrite(B, HIGH);
+ 		digitalWrite(C, HIGH);
+  		digitalWrite(F, HIGH);
+  		digitalWrite(G, HIGH);
+  		break;   
+  }
+}
+
+//----------- Funciones Multiplexación ------------------
+// Hay dos funciones, prenderDigito y imprimirContador, para controlar la multiplexación de la pantalla.
+
+/**
+ * Función: elegirDisplay
+ * Descripción: Esta función selecciona un display específico para mostrar un dígito.
+ * Parámetro:
+ *   - display: El número del display a seleccionar (2 para decenas, 3 para unidades, otros valores para apagar ambos).
+ */
+void elegirDisplay(int display)
+{
+ if (display == DECENA)
+  {
+    digitalWrite(UNIDAD, LOW);
+    digitalWrite(DECENA, HIGH);
+    delay(10);
+  }
+  else if (display == UNIDAD)
+  {
+    digitalWrite(UNIDAD, HIGH);
+    digitalWrite(DECENA, LOW);
+    delay(10);
+  }
+  else 
+  {
+    // Apaga ambos displays
+    digitalWrite(UNIDAD, HIGH);
+    digitalWrite(DECENA, HIGH);
+  }
+}
+
+/**
+ * Función: imprimirContador
+ * Descripción: Esta función imprime un número en los display.
+ * Parámetro:
+ *   - numeroAImprimir: El número que se va a imprimir en los displays.
+ */
+void imprimirContador(int numeroAImprimir)
+{
+  // Apaga todos los displays
+  elegirDisplay(APAGADOS);
+
+  // Imprime el dígito de las decenas
+  imprimirDigito(numeroAImprimir / 10);
+
+  // Selecciona el display de las unidades
+  elegirDisplay(UNIDAD);
+
+  // Apaga todos los displays
+  elegirDisplay(APAGADOS);
+
+  // Imprime el dígito de las unidades
+  imprimirDigito(numeroAImprimir - 10 * ((int)numeroAImprimir / 10));
+
+  // Selecciona el display de las decenas
+  elegirDisplay(DECENA);
+}
+
+/**
+ * Función: botonPresionado
+ * Descripción: Esta función gestiona el contador de dígitos y los botones de suma, resta y reset.
+ * También actualiza el estado anterior de los botones para la próxima iteración.
+ */
+void botonPresionado(void)
+{
+  // Leemos con digitalRead el estado de los pines
+  sumar = digitalRead(ENTRADA_SUMA);
+  restar = digitalRead(ENTRADA_RESTA);
+  reset = digitalRead(ENTRADA_RESET);
+  
+  // Comprobación si el botón de suma (ENTRADA_SUMA) ha sido presionado (LOW) y estaba en estado no presionado (HIGH) previamente
+  if (sumar == LOW && valorAnteriorDeLaSuma == HIGH) {
+    contadorDigito++;
+    
+    // Verifica si el contador ha alcanzado 99 y lo reinicia a 0 si es así
+    if (contadorDigito > 99) contadorDigito = 0;
+  }
+
+  // Comprobación si el botón de resta (ENTRADA_RESTA) ha sido presionado (LOW) y estaba en estado no presionado (HIGH) previamente
+  if (restar == LOW && valorAnteriorDeLaResta == HIGH) {
+    contadorDigito--;
+    
+    // Verifica si el contador ha llegado a -1 y lo reinicia a 99 si es así
+    if (contadorDigito < 0) contadorDigito = 99;
+  }
+
+  // Comprobación si el botón de reset (ENTRADA_RESET) ha sido presionado (LOW) y estaba en estado no presionado (HIGH) previamente
+  if (reset == LOW && valorAnteriorDelReset == HIGH) {
+    // Resetea el valor del contadorDigito a 0
+    contadorDigito = 0;
+  }
+
+  // Actualización del estado anterior de los botones para la próxima iteración
+  valorAnteriorDeLaSuma = sumar;
+  valorAnteriorDeLaResta = restar;
+  valorAnteriorDelReset = reset;
+}
