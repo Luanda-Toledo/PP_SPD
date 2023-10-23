@@ -1,0 +1,306 @@
+/* CONTROL DE VELOCIDAD DE UN VENTILADOR
+Este codigo controla un ventilador y adapta su velocidad en funcion de diferentes
+modos de operacion seleccionado a traves de botones.
+La velocidad actual se muestra en dos display de 7 segmentos para que el usuario
+pueda ver el estado (velocidad) del ventilador.
+*/
+#define A 12
+#define B 13
+#define C 7
+#define D 8
+#define E 9
+#define F 11
+#define G 10
+#define UNIDAD A4
+#define DECENA A5
+#define NINGUNO 0
+#define APAGADO 1
+#define AMBOS 17 
+#define ENTRADA_INTERRUPTOR 2
+#define SENSOR_TEMPERATURA A0
+#define MOTOR_CC 3
+#define FOTORRESISTOR A1
+#define BOTON_FIJO 4
+#define BOTON_TEMPERATURA 5
+#define BOTON_LUZ 6
+#define MODO_FIJO 100
+#define MODO_TEMPERATURA 200
+#define MODO_LUZ 300
+
+int time = 10;
+int lecturaSwitch = 0; 
+int velocidadMaxima = 255; //sensor temp
+int velocidadMinima = 0;
+int modo = 100; 
+int numeroPantalla = 0; // num a imprimir
+int velocidadMotor = 0;
+int valorMinimo = 0; // motor cc, fotorresistor
+int valorMaximo = 0;
+int defaultApagar = 10; 
+
+// Definir los valores mínimo y máximo para el mapeo de rango de temperatura
+float TEMPERATURE_MIN = -40.0;  
+float TEMPERATURE_MAX = 125.0; 
+
+// Definir los valores mínimo y máximo para la lectura analógica dell sensor de temperatura y el motor, y e fotorresistor
+int ANALOG_MIN = 20;     
+int ANALOG_MAX = 358;
+int ANALOG_MAX_LUZ = 679;
+int ANALOG_MIN_LUZ = 6;
+
+void setup()
+{
+  // Configurar los pines de entrada para los botones y los pines de salida
+  pinMode(ENTRADA_INTERRUPTOR, INPUT_PULLUP);
+  pinMode(FOTORRESISTOR, INPUT);
+  pinMode(BOTON_FIJO, INPUT_PULLUP);
+  pinMode(BOTON_TEMPERATURA, INPUT_PULLUP);
+  pinMode(BOTON_LUZ, INPUT_PULLUP);
+  pinMode(C, OUTPUT);
+  pinMode(D, OUTPUT);
+  pinMode(E, OUTPUT);
+  pinMode(G, OUTPUT);
+  pinMode(F, OUTPUT);
+  pinMode(A, OUTPUT);
+  pinMode(B, OUTPUT);
+  pinMode(UNIDAD, OUTPUT);
+  pinMode(DECENA, OUTPUT);
+  
+  pinMode(SENSOR_TEMPERATURA, INPUT);
+  pinMode(MOTOR_CC, OUTPUT);
+ 
+  // Inicializa algunos pines en APAGADO / ENCENDIDO
+  digitalWrite(UNIDAD, APAGADO);
+  digitalWrite(DECENA, APAGADO);
+  digitalWrite(A, LOW);
+  digitalWrite(B, LOW);
+  digitalWrite(C, LOW);
+  digitalWrite(D, LOW);
+  digitalWrite(E, LOW);
+  digitalWrite(F, LOW);
+  digitalWrite(G, LOW);
+}
+
+/**
+ * Función: loop
+ * Descripción: Esta función principal se ejecuta de manera repetitiva en el programa.
+ * Controla el comportamiento del sistema en función de la posición del interruptor y el modo seleccionado.
+ */
+void loop()
+{
+  lecturaSwitch = digitalRead(ENTRADA_INTERRUPTOR); 
+
+  // Seleccion off / on segun el interruptor
+  if (lecturaSwitch == 1)
+  { 
+    actualizarModo(); // Actualizar el modo en función de los botones/sensores
+    
+    if (modo == MODO_FIJO)
+    {
+      velocidadMotor = 127; // 50%
+      numeroPantalla = 50;
+    }
+    else if (modo == MODO_TEMPERATURA)
+    {
+      int valorLeidoAnalogicamenteTemperatura = analogRead(SENSOR_TEMPERATURA); 
+       
+      velocidadMotor = map(valorLeidoAnalogicamenteTemperatura, ANALOG_MIN, ANALOG_MAX, velocidadMinima, velocidadMaxima);
+    
+      numeroPantalla = map(valorLeidoAnalogicamenteTemperatura, ANALOG_MIN, ANALOG_MAX, valorMinimo, valorMaximo);
+    }
+    else if (modo == MODO_LUZ)
+    {
+      int valorLeidoAnalogicamenteLuz = analogRead(FOTORRESISTOR);
+      
+      velocidadMotor = map(valorLeidoAnalogicamenteLuz, ANALOG_MIN_LUZ, ANALOG_MAX_LUZ, velocidadMinima, velocidadMaxima);
+    
+      numeroPantalla = map(valorLeidoAnalogicamenteLuz, ANALOG_MIN_LUZ, ANALOG_MAX_LUZ, valorMinimo, valorMaximo);  
+    }
+    
+    imprimirDosDigitos(numeroPantalla);
+    analogWrite(MOTOR_CC, velocidadMotor); // Controlar la velocidad del motor mediante la modulación por ancho de pulso (PWM)
+  } 
+  else //Apagar
+  {
+    elegirDisplayActualizar(AMBOS);
+    seleccionarDigito(defaultApagar);
+    analogWrite(MOTOR_CC, velocidadMinima);
+  }    
+} 
+
+/**
+ * Función: actualizarModo
+ * Descripción: Esta función actualiza la variable "modo" en función del estado de varios botones o sensores.
+ * Si uno de los botones o sensores (BOTON_FIJO, BOTON_TEMPERATURA o BOTON_LUZ) está activado (estado igual a 0),
+ * se actualiza la variable "modo" en consecuencia.
+ */
+void actualizarModo() 
+{
+  if(digitalRead(BOTON_FIJO) == 0)
+  {
+    modo = MODO_FIJO;
+  }
+  else if (digitalRead(BOTON_TEMPERATURA) == 0)
+  {
+    modo = MODO_TEMPERATURA;
+  }
+  else if (digitalRead(BOTON_LUZ) == 0)
+  {
+    modo = MODO_LUZ;
+  }  
+}
+
+/**
+ * Función: elegirDisplayActualizar
+ * Descripción: Controla la activación de dos displays de 7 segmentos para mostrar números de dos dígitos.
+ * Esta función permite seleccionar cuál de los dos displays de 7 segmentos se va a actualizar para mostrar
+ * un número de dos dígitos. El parámetro "display" determina si se actualizará el display de las unidades, el de las decenas,
+ * ambos o ninguno.
+ * Parámetro:
+ *   - display: Un valor entero que indica qué display se actualizará (UNIDAD, DECENA, AMBOS o NINGUNO).
+ */
+void elegirDisplayActualizar(int display)
+{
+ if (display == UNIDAD)
+  {
+    digitalWrite(UNIDAD, LOW);
+    digitalWrite(DECENA, HIGH);
+    delay(time);
+  }
+  else if (display == DECENA)
+  {
+    digitalWrite(UNIDAD, HIGH);
+    digitalWrite(DECENA, LOW);
+    delay(time);
+  }
+  else if(display == AMBOS)
+  {
+    digitalWrite(UNIDAD, LOW);
+    digitalWrite(DECENA, LOW);
+    delay(time);
+  }
+  else 
+  {
+    // No se actualiza ningun dsplay
+    digitalWrite(UNIDAD, HIGH);
+    digitalWrite(DECENA, HIGH);
+  }
+}
+
+/**
+ * Función: imprimirDosDigitos
+ * Descripción: Imprime un número de dos dígitos en dos displays de 7 segmentos.
+ * Esta función toma un número de dos dígitos y lo muestra en dos displays de 7 segmentos. 
+ * Imprime el dígito de las decenas en el primer display y el dígito de las unidades en el segundo display.
+ * Parámetro:
+ *   - numeroAImprimir: Un número entero de dos dígitos (0-99) que se mostrará en los displays.
+ */
+void imprimirDosDigitos(int numeroAImprimir)
+{
+  elegirDisplayActualizar(NINGUNO);
+
+  // Imprime el dígito de las decenas
+  seleccionarDigito(numeroAImprimir / 10);
+
+  elegirDisplayActualizar(DECENA);
+
+  elegirDisplayActualizar(NINGUNO);
+
+  // Imprime el dígito de las unidades
+  seleccionarDigito(numeroAImprimir - 10 * ((int)numeroAImprimir / 10));
+
+  elegirDisplayActualizar(UNIDAD);
+}
+
+/**
+ * Función: seleccionarDigito
+ * Descripción: Controla la activación de los segmentos de un display de 7 segmentos
+ *              para mostrar un dígito específico.
+ * Parámetro:
+ *   - digito: Un entero que representa el dígito a mostrar en el display (0-9).
+ */
+void seleccionarDigito(int digito)
+{
+  digitalWrite(A, LOW);
+  digitalWrite(B, LOW);
+  digitalWrite(C, LOW);
+  digitalWrite(D, LOW);
+  digitalWrite(E, LOW);
+  digitalWrite(F, LOW);
+  digitalWrite(G, LOW);
+
+  switch(digito)
+  {
+    case 0: // 0 - A,B,C,D,E,F
+  		digitalWrite(A, HIGH);
+  		digitalWrite(B, HIGH);
+  		digitalWrite(C, HIGH);
+  		digitalWrite(D, HIGH);
+  		digitalWrite(E, HIGH);
+  		digitalWrite(F, HIGH);	
+  		break;
+    case 1: // 1 - B,C
+  		digitalWrite(B, HIGH);
+  		digitalWrite(C, HIGH);
+  		break;
+    case 2: // 2 - A,B,D,E,G
+  		digitalWrite(A, HIGH);
+  		digitalWrite(B, HIGH);
+  		digitalWrite(D, HIGH);
+  		digitalWrite(E, HIGH);
+  		digitalWrite(G, HIGH);
+    	break;
+    case 3: // 3 - A,B,C,D,G
+  		digitalWrite(A, HIGH);
+  		digitalWrite(B, HIGH);
+  		digitalWrite(C, HIGH);
+  		digitalWrite(D, HIGH);
+  		digitalWrite(G, HIGH);
+  		break;
+    case 4: // 4 - B,C,F,G
+  		digitalWrite(B, HIGH);
+  		digitalWrite(C, HIGH);
+  		digitalWrite(F, HIGH);
+  		digitalWrite(G, HIGH);
+  		break;
+    case 5: // 5 - A,C,D,F,G
+  		digitalWrite(A, HIGH);
+  		digitalWrite(C, HIGH);
+  		digitalWrite(D, HIGH);
+  		digitalWrite(F, HIGH);
+  		digitalWrite(G, HIGH);
+  		break;
+    case 6: // 6 - A,C,D,E,F,G
+    	digitalWrite(A, HIGH);
+  		digitalWrite(C, HIGH);
+  		digitalWrite(D, HIGH);
+  		digitalWrite(E, HIGH);
+  		digitalWrite(F, HIGH);
+  		digitalWrite(G, HIGH);
+  		break;
+    case 7: // 7 - A,B,C
+  		digitalWrite(A, HIGH);
+ 		digitalWrite(B, HIGH);
+  		digitalWrite(C, HIGH);
+  		break;
+    case 8: // 8 - TODOS
+  		digitalWrite(A, HIGH);
+  		digitalWrite(B, HIGH);
+  		digitalWrite(C, HIGH);
+  		digitalWrite(D, HIGH);
+  		digitalWrite(E, HIGH);
+  		digitalWrite(F, HIGH);
+  		digitalWrite(G, HIGH);
+  		break;
+    case 9:
+    	// 9 - A,B,C,F,G
+  		digitalWrite(A, HIGH);
+  		digitalWrite(B, HIGH);
+ 		digitalWrite(C, HIGH);
+  		digitalWrite(F, HIGH);
+  		digitalWrite(G, HIGH);
+  		break;
+    default:
+    	break;
+  }
+}
